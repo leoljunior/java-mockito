@@ -14,10 +14,12 @@ import com.leonardo.mockito.model.Leilao;
 public class FinalizarLeilaoService {
 
 	private LeilaoDao leiloes;
+	private EnviadorDeEmails enviadorDeEmails;
 
 	@Autowired //Ao fazer testes é melhor que a injeção de dependencia seja via contrutor, pois assim já passamos o mock  como parametro
-	public FinalizarLeilaoService(LeilaoDao leiloes) {
+	public FinalizarLeilaoService(LeilaoDao leiloes, EnviadorDeEmails enviadorDeEmails) {
 		this.leiloes = leiloes;
+		this.enviadorDeEmails = enviadorDeEmails;
 	}
 
 	public void finalizarLeiloesExpirados() {
@@ -27,6 +29,8 @@ public class FinalizarLeilaoService {
 			leilao.setLanceVencedor(maiorLance);
 			leilao.fechar();
 			leiloes.salvar(leilao);
+			
+			enviadorDeEmails.enviarEmailVencedorLeilao(maiorLance);
 		});
 	}
 

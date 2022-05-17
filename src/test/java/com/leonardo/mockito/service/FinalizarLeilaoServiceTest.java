@@ -25,10 +25,13 @@ class FinalizarLeilaoServiceTest {
 	@Mock //indica qual atributo são mocks, o mesmo que fazer LeilaoDao leilaoDaoMock =  Mockito.mock(LeilaoDao.class); - porem deve ser iniciado
 	private LeilaoDao leilaoDaoMock; //usaremos beforeEach do junit para iniciar
 	
+	@Mock
+	private EnviadorDeEmails enviadorDeEmails;
+	
 	@BeforeEach //usando o beferoEach do junit, antes de cada testeminiciamos o mock e o service
 	public void iniciar() {
 		MockitoAnnotations.openMocks(this);
-		this.service = new FinalizarLeilaoService(leilaoDaoMock);
+		this.service = new FinalizarLeilaoService(leilaoDaoMock, enviadorDeEmails);
 	}
 	
 	
@@ -38,7 +41,7 @@ class FinalizarLeilaoServiceTest {
 		List<Leilao> leiloes = leiloes();
 		
 		//Aqui mostramos para o mockito que quando(when) o metodo X for chamado então retornamos(thenReturn) a lista de leilões, isso para que o mock não retorne
-		Mockito.when(leilaoDaoMock.buscarLeiloesExpirados()).thenReturn(leiloes);//uma lista vazia 
+		Mockito.when(leilaoDaoMock.buscarLeiloesExpirados()).thenReturn(leiloes);//uma lista vazia. ou seja simulaa o comportamento
 		
 		service.finalizarLeiloesExpirados();//chamando o metodo a ser testado, finalizarLeiloesExpirados
 		
@@ -54,6 +57,32 @@ class FinalizarLeilaoServiceTest {
  		Mockito.verify(leilaoDaoMock).salvar(leilao);
 	}
 
+	
+	@Test
+	void deveriaEnviarEmailParaLeilaoVencedor() {
+		List<Leilao> leiloes = leiloes();		
+		Mockito.when(leilaoDaoMock.buscarLeiloesExpirados()).thenReturn(leiloes); 		
+		service.finalizarLeiloesExpirados();		
+		Mockito.verify(enviadorDeEmails).enviarEmailVencedorLeilao(leiloes.get(0).getLanceVencedor()); 		
+	}
+	
+	@Test
+	void naoDeveriaEnviarEmailAoVencedorEmCasoDeErroAoEncerrarOLeilao() {
+		List<Leilao> leiloes = leiloes();		
+		Mockito.when(leilaoDaoMock.buscarLeiloesExpirados()).thenReturn(leiloes); 
+		
+		//Aqui quando o leilaoDaoMock.salvar(Mockito.any()) for executado com qualquer parametro(Mockito.any)
+		//lançamos uma RuntimeException
+		Mockito.when(leilaoDaoMock.salvar(Mockito.any())).thenThrow(RuntimeException.class);	
+		
+		//Tem que ser colocado no try catch por causa da exception que sera lançada, se não tratada aqui o service nem executa o finalizarLeiloesExpirados abaixo.
+		try {			
+			service.finalizarLeiloesExpirados();
+			Mockito.verifyNoInteractions(enviadorDeEmails);//verificamos se houve interação com o mock enviadorDeEmails			
+		} catch (Exception e) {}
+		
+			
+	}
 	
 	
 	private List<Leilao> leiloes() {
