@@ -3,7 +3,10 @@ package com.leonardo.mockito.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +27,10 @@ class GeradorDePagamentoTest {
 	private GeradorDePagamento geradorDePagamento;
 	
 	@Mock
-	private PagamentoDao pagamentoDaoMock; 
+	private PagamentoDao pagamentoDaoMock;
+	
+	@Mock
+	private Clock clock;
 	
 	@Captor //capturar objeto com Mockito
 	private ArgumentCaptor<Pagamento> pagamentoCaptor;
@@ -32,7 +38,7 @@ class GeradorDePagamentoTest {
 	@BeforeEach
 	private void iniciar() {
 		MockitoAnnotations.openMocks(this);
-		this.geradorDePagamento = new GeradorDePagamento(pagamentoDaoMock);
+		this.geradorDePagamento = new GeradorDePagamento(pagamentoDaoMock, clock);
 	}
 	
 	
@@ -40,8 +46,15 @@ class GeradorDePagamentoTest {
 	void deveriaGerarPagamentoParaLeilaoVencedor() {
 		Leilao leilao = leilao();
 		Lance lanceVencedor = leilao.getLances().get(0);
-		geradorDePagamento.gerarPagamento(lanceVencedor);
 		
+		//Aqui atraves do clock instanciamos uma data fixa para o teste, ja que no metodo é usado o metodo static .now
+		LocalDate data = LocalDate.of(2022, 5, 17);
+		Instant instant = data.atStartOfDay(ZoneId.systemDefault()).toInstant();
+		
+		Mockito.when(clock.instant()).thenReturn(instant);
+		Mockito.when(clock.getZone()).thenReturn(ZoneId.systemDefault());
+		
+		geradorDePagamento.gerarPagamento(lanceVencedor);
 		
 		//Aqui temos que passar um pagamento para o metodo salvar, porem o pagamento é instanciado dentro da classe pagamentoDao
 		//então para passar esse parametro nós podemos captura-lo com o @Captor do Mockito.
